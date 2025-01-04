@@ -1,1 +1,3 @@
-__all__ = []
+from .perceptron import Perceptron
+
+__all__ = ["Perceptron"]
