@@ -32,11 +32,19 @@ class Perceptron:
             return self.activation_function(input)
         return predictions
     
-    def loss(self):
-        pass
+    def loss(self, predictions: np.ndarray, true_values: np.ndarray):
+        error = predictions - true_values
+        return error
 
-    def train(self):
-        pass
+    def train(self, train_x: np.ndarray, train_y: np.ndarray):
+        prediction = self.predict(input=train_x)
+        error = self.loss(predictions=prediction, true_values=train_y)
+
+        # update the weights
+        self.weights += self.learning_rate * error * train_x
+
+        # update the bias
+        self.bias += self.weights * error
 
 
 if __name__ == '__main__':
@@ -44,5 +52,6 @@ if __name__ == '__main__':
         if input > 0: return np.array(1)
         return np.array(0)
 
-    test = np.array([-1,2,3])
+    test_x = np.array([[-1,2,3], [-1,-2,3], [-1,2,-3], [0,2,3]]) 
+    test_y = [1, 0, 0, 1]
     perceptron = Perceptron(num_inputs=3, activation_function=heaviside_step_func)
