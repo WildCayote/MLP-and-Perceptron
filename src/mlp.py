@@ -36,22 +36,23 @@ class MultiLayerPerceptron:
 
     def initialize_biases(self):
         # define the biases in the input layer
-        input_biases = np.random.rand((self.num_inputs * self.hidden_width))
+        input_biases = np.random.rand(self.hidden_width)
 
         # defin the biases between the hidden layers
         hidden_biases = []
         for _ in range(self.num_hidden - 1):
             hidden_biases.append(
-                np.random.rand((self.hidden_width ** 2))
+                np.random.rand((self.hidden_width))
             )
         hidden_biases = np.array(hidden_biases)
 
         # define the biases between the last hidden layer and the output layer
-        output_biases = np.random.rand((self.hidden_width * self.num_output))
+        output_biases = np.random.rand(self.num_output)
 
         return input_biases, hidden_biases, output_biases
 
     def predict(self):
+        # first pass the inputs through 
         pass
 
     def train(self):
@@ -64,4 +65,4 @@ if __name__ == '__main__':
 
     test_x = np.array([[-1,2,3], [-1,-2,3], [-1,2,-3], [0,2,3]]) 
     test_y = np.array([1, 0, 0, 1])
-    mlp = MultiLayerPerceptron(num_inputs=3, num_hidden=2, num_output=1, hidden_width=4, activation_function=heaviside_step_func)
+    mlp = MultiLayerPerceptron(num_inputs=3, num_hidden=3, num_output=1, hidden_width=4, activation_function=heaviside_step_func)
