@@ -51,18 +51,36 @@ class MultiLayerPerceptron:
 
         return input_biases, hidden_biases, output_biases
 
-    def predict(self):
-        # first pass the inputs through 
-        pass
+    def predict(self, input:np.ndarray):
+        # input layer
+        z1 = input @ self.input_weights + self.input_biases
+        z1 = self.activation_function(z1)
+
+        # hidden layers
+        z2 = None
+        for layer_idx in range(self.hidden_weights.shape[0]):
+            weights = self.hidden_weights[layer_idx]
+            biases = self.hidden_biases[layer_idx]
+
+            if type(z2) != np.ndarray:
+                result = z1 @ weights + biases
+            else:
+                result = z2 @ weights + biases
+            z2 = self.activation_function(result)
+        
+        # output layer
+        z3 = z2 @ self.output_weights + self.output_biases
+        z3 = self.activation_function(z3)
+
+        return z3
 
     def train(self):
         pass
 
 if __name__ == '__main__':
     def heaviside_step_func(input: np.ndarray):
-        if input > 0: return np.array(1)
-        return np.array(0)
+        return (input > 0).astype(int)
 
     test_x = np.array([[-1,2,3], [-1,-2,3], [-1,2,-3], [0,2,3]]) 
     test_y = np.array([1, 0, 0, 1])
-    mlp = MultiLayerPerceptron(num_inputs=3, num_hidden=3, num_output=1, hidden_width=4, activation_function=heaviside_step_func)
+    mlp = MultiLayerPerceptron(num_inputs=3, num_hidden=2, num_output=1, hidden_width=4, activation_function=heaviside_step_func)
