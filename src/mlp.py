@@ -98,6 +98,10 @@ class MultiLayerPerceptron:
 
         return z3
 
+    def loss(self, predictions:np.ndarray, true_values:np.ndarray):
+        error = predictions - true_values
+        return error
+
     def train(self):
         pass
 
