@@ -3,112 +3,106 @@ import numpy as np
 
 
 class MultiLayerPerceptron:
-    def __init__(self, num_inputs:int, num_hidden:int, hidden_width:int, activation_function:Callable[[np.ndarray], np.ndarray], num_output:int = 1, learning_rate:float = 0.1):
+    def __init__(self, num_inputs:int, num_hidden:int, hidden_width:int, activation_function:Callable[[np.ndarray], np.ndarray], activation_derivated:Callable[[np.ndarray], np.ndarray],  num_output:int = 1, learning_rate:float = 0.1):
         self.num_inputs = num_inputs
         self.num_hidden = num_hidden
         self.hidden_width = hidden_width
         self.num_output = num_output
         self.learning_rate = np.array(learning_rate)
         self.activation_function = activation_function
+        self.activation_derviated = activation_derivated
 
         # initialize the weights
-        self.input_weights, self.hidden_weights, self.output_weights = self.initialize_weights()
+        self.weights = self.initialize_weights()
 
         # initialize the biases
-        self.input_biases, self.hidden_biases, self.output_biases = self.initialize_biases()
+        self.biases = self.initialize_biases()
 
     def initialize_weights(self):
+        weights = []
         # define the input weights
         if self.num_hidden > 0:
-            input_weights = np.random.rand(self.num_inputs, self.hidden_width)
+            weights.append(np.random.rand(self.num_inputs, self.hidden_width))
         else:
-            input_weights = np.random.rand(self.num_inputs, self.num_output)
-        
+            weights.append(np.random.rand(self.num_inputs, self.num_output))
+
         # define the weights in the hidden layers
         if self.num_hidden > 1:
-            hidden_weights = []
             for _ in range(self.num_hidden - 1):
-                hidden_weights.append(
+                weights.append(
                     np.random.rand(self.hidden_width, self.hidden_width)
                 )
-            hidden_weights = np.array(hidden_weights)
-        else:
-            hidden_weights = None
         
         # define the weights between the last hidden layer and the output layer
         if self.num_hidden > 0:
-            output_weights = np.random.rand(self.hidden_width, self.num_output)
-        else:
-            output_weights = None
+            weights.append(np.random.rand(self.hidden_width, self.num_output))
 
-        return input_weights, hidden_weights, output_weights
+        return weights 
 
     def initialize_biases(self):
+        biases = []
         # define the biases in the input layer
         if self.num_hidden > 0:
-            input_biases = np.random.rand(self.hidden_width)
+            biases.append(np.random.rand(self.hidden_width))
         else: 
-            input_biases = np.random.rand(self.num_output)
+            biases.append(np.random.rand(self.num_output))
 
         # defin the biases between the hidden layers
         if self.num_hidden > 1:
-            hidden_biases = []
             for _ in range(self.num_hidden - 1):
-                hidden_biases.append(
+                biases.append(
                     np.random.rand((self.hidden_width))
                 )
-            hidden_biases = np.array(hidden_biases)
-        else:
-            hidden_biases = None
 
         # define the biases between the last hidden layer and the output layer
         if self.num_hidden > 0:
-            output_biases = np.random.rand(self.num_output)
-        else:
-            output_biases = None
+            biases.append(np.random.rand(self.num_output))
 
-        return input_biases, hidden_biases, output_biases
+        return biases
 
     def predict(self, input:np.ndarray):
-        # input layer
-        z1 = input @ self.input_weights + self.input_biases
-        z1 = self.activation_function(z1)
+        # list for holding activation values for each layer
+        activations = [input]
 
-        if self.num_hidden < 1:
-            return z1
+        for weight in self.weights:
+            result = self.activation_function(np.dot(weight.T, input))
+            activations.append(result)
+            input = result
 
-        # hidden layers
-        if self.num_hidden > 1:
-            z2 = None
-            for layer_idx in range(self.hidden_weights.shape[0]):
-                weights = self.hidden_weights[layer_idx]
-                biases = self.hidden_biases[layer_idx]
-
-                if type(z2) != np.ndarray:
-                    result = z1 @ weights + biases
-                else:
-                    result = z2 @ weights + biases
-                z2 = self.activation_function(result)
-        else:
-            z2 = z1
-        
-        # output layer
-        z3 = z2 @ self.output_weights + self.output_biases
-        z3 = self.activation_function(z3)
-
-        return z3
+        return result, activations
 
     def loss(self, predictions:np.ndarray, true_values:np.ndarray):
-        error = predictions - true_values
+        error = -np.sum(true_values * np.log(predictions + 1e-12) / true_values.shape[0])
         return error
 
-    def train(self):
+    def train(self, train_x:np.ndarray, train_y:np.ndarray):
+        # forward propagation
+        prediction, activations=self.predict(input=train_x)
+        error = self.loss(predictions=prediction, true_values=train_y)
+
+        # backpropagation
+        weight_slopes = [None] * len(self.weights)
+        for i in reversed(range(len(self.weights))):
+            activation = activations[i + 1]
+            delta_intermidiate = error * self.activation_derviated(activation)
+            current_activation = activations[i]
+            weight_slopes[i] = np.dot(current_activation, delta_intermidiate.T)
+
+        return weight_slopes
+            
+    def fit(self,  train_x:np.ndarray, train_y:np.ndarray, num_epochs:int = 20):
         pass
 
 if __name__ == '__main__':
-    def heaviside_step_func(input: np.ndarray):
-        return (input > 0).astype(int)
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+    
+    def sigmoid_derivative(x):
+        s = sigmoid(x)
+        return s * (1 - s)
 
-    test_x = np.array([[-1,2,3], [-1,-2,3], [-1,2,-3], [0,2,3]]) 
-    test_y = np.array([1, 0, 0, 1])
-    mlp = MultiLayerPerceptron(num_inputs=3, num_hidden=0, num_output=1, hidden_width=4, activation_function=heaviside_step_func)
+    test_x = np.array([[-1,2,3], [-1,-2,3], [-1,2,-3]]) 
+    test_y = np.array([1, 0, 0])
+    mlp = MultiLayerPerceptron(num_inputs=3, num_hidden=2, num_output=1, hidden_width=4, activation_function=sigmoid, activation_derivated=sigmoid_derivative)
+
+    mlp.train(train_x=test_x, train_y=test_y)
