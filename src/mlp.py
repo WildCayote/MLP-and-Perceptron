@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, List
 import numpy as np
 
 
@@ -75,7 +75,7 @@ class MultiLayerPerceptron:
         error = -np.sum(true_values * np.log(predictions + 1e-12) / true_values.shape[0])
         return error
 
-    def train(self, train_x:np.ndarray, train_y:np.ndarray):
+    def calculate_gradients(self, train_x:np.ndarray, train_y:np.ndarray):
         # forward propagation
         prediction, activations=self.predict(input=train_x)
         error = self.loss(predictions=prediction, true_values=train_y)
@@ -87,11 +87,47 @@ class MultiLayerPerceptron:
             delta_intermidiate = error * self.activation_derviated(activation)
             current_activation = activations[i]
             weight_slopes[i] = np.dot(current_activation, delta_intermidiate.T)
+        
+        bias_slopes = [None] * len(self.biases)
+        for i in reversed(range(len(self.biases))):
+            activation = activations[i + 1]
+            delta_intermidiate = error * self.activation_derviated(activation)
+            delta_intermidiate = np.dot(activation, delta_intermidiate.T)
+            bias_reshaped = self.biases[i].reshape(-1, self.biases[i].shape[0])
+            bias_slopes[i] = np.dot(bias_reshaped, delta_intermidiate)
 
-        return weight_slopes
+        return weight_slopes, bias_slopes,  error
+
+    def update_weights(self, weight_slopes: List[np.ndarray]):
+        new_weights = []
+        for weight, gradient in zip(self.weights, weight_slopes):
+            updated_weight = weight + self.learning_rate * gradient
+            new_weights.append(updated_weight)
+        
+        self.weights = new_weights
+    
+    def update_biases(self, bias_slopes: List[np.ndarray]):
+        # print(self.biases, ' before update')
+        new_biases = []
+        for bias, gradient in zip(self.biases, bias_slopes):
+            updated_bias = bias + self.learning_rate * gradient
+            new_biases.append(updated_bias.reshape(-1, updated_bias.shape[0]).sum(axis=1))
+        
+        self.biases = new_biases
+        # print(self.biases, ' after update')
+
+    def fit(self,  train_x:np.ndarray, train_y:np.ndarray, num_epochs:int = 1, verbose:bool = False):
+        for epoch in range(num_epochs):
+            # make predictions, calculate errors and calculate gradients
+            weight_gradients, bias_gradients, error = self.calculate_gradients(train_x=train_x, train_y=train_y)
+
+            # update the weights
+            self.update_weights(weight_slopes=weight_gradients)
             
-    def fit(self,  train_x:np.ndarray, train_y:np.ndarray, num_epochs:int = 20):
-        pass
+            # update the biases
+            self.update_biases(bias_slopes=bias_gradients)
+
+            if verbose: print(f'Loss at epoch {epoch + 1}: {error}')
 
 if __name__ == '__main__':
     def sigmoid(x):
@@ -105,4 +141,4 @@ if __name__ == '__main__':
     test_y = np.array([1, 0, 0])
     mlp = MultiLayerPerceptron(num_inputs=3, num_hidden=2, num_output=1, hidden_width=4, activation_function=sigmoid, activation_derivated=sigmoid_derivative)
 
-    mlp.train(train_x=test_x, train_y=test_y)
+    mlp.fit(train_x=test_x, train_y=test_y, verbose=True, num_epochs=100)
