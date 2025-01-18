@@ -1,4 +1,3 @@
-from typing import Callable, List
 import numpy as np
 
 
@@ -20,39 +19,38 @@ class MultiLayerPerceptron:
     def initialize_weights(self):
         weights = []
         if self.num_hidden > 0:
-            weights.append(np.random.rand(self.num_inputs, self.hidden_width))
+            weights.append(np.random.randn(self.num_inputs, self.hidden_width))
             for _ in range(self.num_hidden - 1):
-                weights.append(np.random.rand(
-                    self.hidden_width, self.hidden_width))
-            weights.append(np.random.rand(self.hidden_width, self.num_output))
+                weights.append(np.random.randn(self.hidden_width, self.hidden_width))
+            weights.append(np.random.randn(self.hidden_width, self.num_output))
         else:
-            weights.append(np.random.rand(self.num_inputs, self.num_output))
+            weights.append(np.random.randn(self.num_inputs, self.num_output))
         return weights
 
     def initialize_biases(self):
         biases = []
         if self.num_hidden > 0:
-            biases.append(np.random.rand(self.hidden_width))
+            biases.append(np.random.randn(self.hidden_width))
             for _ in range(self.num_hidden - 1):
-                biases.append(np.random.rand(self.hidden_width))
-            biases.append(np.random.rand(self.num_output))
+                biases.append(np.random.randn(self.hidden_width))
+            biases.append(np.random.randn(self.num_output))
         else:
-            biases.append(np.random.rand(self.num_output))
+            biases.append(np.random.randn(self.num_output))
         return biases
 
     def predict(self, input):
         activations = [input]
         for i, (weight, bias) in enumerate(zip(self.weights, self.biases)):
             if i == len(self.weights) - 1:  # Output layer
-                input = self.output_activation(
-                    np.dot(input, weight) + bias)
+                input = self.output_activation(np.dot(input, weight) + bias)
             else:  # Hidden layers
                 input = self.activation_function(np.dot(input, weight) + bias)
             activations.append(input)
         return input, activations
 
     def loss(self, predictions, true_values):
-        return -np.mean(true_values * np.log(predictions + 1e-12))
+        # Cross-entropy loss
+        return -np.mean(np.sum(true_values * np.log(predictions + 1e-12), axis=1))
 
     def calculate_gradients(self, train_x, train_y):
         predictions, activations = self.predict(train_x)
@@ -60,29 +58,25 @@ class MultiLayerPerceptron:
         weight_gradients = [None] * len(self.weights)
         bias_gradients = [None] * len(self.biases)
 
-        delta = (predictions - train_y) * \
-            self.activation_derviated(activations[-1])
+        # Output layer gradient
+        delta = predictions - train_y
         for i in reversed(range(len(self.weights))):
             weight_gradients[i] = np.dot(activations[i].T, delta)
             bias_gradients[i] = np.sum(delta, axis=0)
             if i > 0:
-                delta = np.dot(
-                    delta, self.weights[i].T) * self.activation_derviated(activations[i])
+                delta = np.dot(delta, self.weights[i].T) * self.activation_derviated(activations[i])
 
         return weight_gradients, bias_gradients, error
 
     def update_weights(self, weight_slopes):
-        self.weights = [w - self.learning_rate * g for w,
-                        g in zip(self.weights, weight_slopes)]
+        self.weights = [w - self.learning_rate * g for w, g in zip(self.weights, weight_slopes)]
 
     def update_biases(self, bias_slopes):
-        self.biases = [b - self.learning_rate *
-                       g for b, g in zip(self.biases, bias_slopes)]
+        self.biases = [b - self.learning_rate * g for b, g in zip(self.biases, bias_slopes)]
 
     def fit(self, train_x, train_y, num_epochs=1, verbose=False):
         for epoch in range(num_epochs):
-            weight_gradients, bias_gradients, error = self.calculate_gradients(
-                train_x, train_y)
+            weight_gradients, bias_gradients, error = self.calculate_gradients(train_x, train_y)
             self.update_weights(weight_gradients)
             self.update_biases(bias_gradients)
             if verbose:
@@ -101,11 +95,17 @@ if __name__ == '__main__':
         exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))
         return exp_x / np.sum(exp_x, axis=1, keepdims=True)
 
+    # One-hot encoded labels
     test_x = np.array([[0.5, 0.2, 0.1], [0.6, 0.8, 0.1], [0.9, 0.3, 0.4]])
-    test_y = np.array([[1], [0], [1]])
-    mlp = MultiLayerPerceptron(num_inputs=3, num_hidden=2, hidden_width=4,
-                               activation_function=sigmoid, activation_derivated=sigmoid_derivative, output_activation=softmax)
+    test_y = np.array([[1, 0], [0, 1], [1, 0]])  # 2 output classes
 
+    mlp = MultiLayerPerceptron(num_inputs=3, num_hidden=2, hidden_width=4,
+                               activation_function=sigmoid, activation_derivated=sigmoid_derivative, output_activation=softmax, num_output=2)
+
+    print("Initial Predictions:")
     print(mlp.predict(test_x)[0])
+
     mlp.fit(train_x=test_x, train_y=test_y, verbose=True, num_epochs=10)
+
+    print("Final Predictions:")
     print(mlp.predict(test_x)[0])
